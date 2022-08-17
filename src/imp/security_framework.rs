@@ -3,6 +3,8 @@ extern crate security_framework;
 extern crate security_framework_sys;
 extern crate tempfile;
 
+pub use self::security_framework::secure_transport::{HandshakeMode, SSLPinningMode};
+
 use self::security_framework::base;
 use self::security_framework::certificate::SecCertificate;
 use self::security_framework::identity::SecIdentity;
@@ -323,6 +325,8 @@ pub struct TlsConnector {
     disable_built_in_roots: bool,
     #[cfg(feature = "alpn")]
     alpn: Vec<String>,
+    handshake_mode: HandshakeMode,
+    ssl_pinning_mode: SSLPinningMode,
 }
 
 impl TlsConnector {
@@ -342,6 +346,8 @@ impl TlsConnector {
             disable_built_in_roots: builder.disable_built_in_roots,
             #[cfg(feature = "alpn")]
             alpn: builder.alpn.clone(),
+            handshake_mode: builder.handshake_mode,
+            ssl_pinning_mode: builder.ssl_pinning_mode,
         })
     }
 
@@ -364,6 +370,8 @@ impl TlsConnector {
         builder.danger_accept_invalid_hostnames(self.danger_accept_invalid_hostnames);
         builder.danger_accept_invalid_certs(self.danger_accept_invalid_certs);
         builder.trust_anchor_certificates_only(self.disable_built_in_roots);
+        builder.set_handshake_mode(self.handshake_mode);
+        builder.set_ssl_pinning_mode(self.ssl_pinning_mode);
 
         #[cfg(feature = "alpn")]
         {

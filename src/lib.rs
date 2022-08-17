@@ -329,6 +329,45 @@ pub enum Protocol {
     __NonExhaustive,
 }
 
+/// SSL Pinning Mode
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum SSLPinningMode {
+    /// Do not used pinned certificates to validate servers.
+    None,
+    /// Validate host certificates against pinned certificates.
+    Certificate,
+}
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+impl From<SSLPinningMode> for imp::SSLPinningMode {
+    fn from(val: SSLPinningMode) -> Self {
+        match val {
+            SSLPinningMode::None => imp::SSLPinningMode::None,
+            SSLPinningMode::Certificate => imp::SSLPinningMode::Certificate,
+        }
+    }
+}
+
+/// Handshake Mode
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum HandshakeMode {
+    /// Original way
+    Default,
+    /// According to the settings of Pinning Mode
+    PinningMode,
+}
+
+#[cfg(any(target_os = "macos", target_os = "ios"))]
+impl From<HandshakeMode> for imp::HandshakeMode {
+    fn from(val: HandshakeMode) -> Self {
+        match val {
+            HandshakeMode::Default => imp::HandshakeMode::Default,
+            HandshakeMode::PinningMode => imp::HandshakeMode::PinningMode,
+        }
+    }
+}
 /// A builder for `TlsConnector`s.
 pub struct TlsConnectorBuilder {
     identity: Option<Identity>,
@@ -341,6 +380,10 @@ pub struct TlsConnectorBuilder {
     disable_built_in_roots: bool,
     #[cfg(feature = "alpn")]
     alpn: Vec<String>,
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    handshake_mode: imp::HandshakeMode,
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    ssl_pinning_mode: imp::SSLPinningMode,
 }
 
 impl TlsConnectorBuilder {
@@ -378,6 +421,12 @@ impl TlsConnectorBuilder {
     /// Defaults to an empty set.
     pub fn add_root_certificate(&mut self, cert: Certificate) -> &mut TlsConnectorBuilder {
         self.root_certificates.push(cert);
+        self
+    }
+
+    /// setting certificate to the set of roots that the connector will trust.
+    pub fn set_root_certificate(&mut self, cert: Vec<Certificate>) -> &mut TlsConnectorBuilder {
+        self.root_certificates = cert;
         self
     }
 
@@ -441,6 +490,20 @@ impl TlsConnectorBuilder {
         self
     }
 
+    /// 设置握手方式，默认为 HandshakeMode::Default
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    pub fn set_handshake_mode(&mut self, mode: HandshakeMode) -> &mut TlsConnectorBuilder {
+        self.handshake_mode = mode.into();
+        self
+    }
+
+    /// 当为 HandshakeMode::PinningMode 时，改设置项目生效
+    /// 默认为 SSLPinningMode::Certificate
+    #[cfg(any(target_os = "macos", target_os = "ios"))]
+    pub fn set_ssl_pinning_mode(&mut self, mode: SSLPinningMode) -> &mut TlsConnectorBuilder {
+        self.ssl_pinning_mode = mode.into();
+        self
+    }
     /// Creates a new `TlsConnector`.
     pub fn build(&self) -> Result<TlsConnector> {
         let connector = imp::TlsConnector::new(self)?;
@@ -489,6 +552,10 @@ impl TlsConnector {
             disable_built_in_roots: false,
             #[cfg(feature = "alpn")]
             alpn: vec![],
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            handshake_mode: imp::HandshakeMode::Default,
+            #[cfg(any(target_os = "macos", target_os = "ios"))]
+            ssl_pinning_mode: imp::SSLPinningMode::Certificate,
         }
     }
 
